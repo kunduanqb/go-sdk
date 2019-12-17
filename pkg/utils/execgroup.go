@@ -19,8 +19,10 @@ package utils
 
 import (
 	"context"
-	"github.com/optimizely/go-sdk/pkg/logging"
 	"sync"
+	"time"
+
+	"github.com/optimizely/go-sdk/pkg/logging"
 )
 
 var logger = logging.GetLogger("ExecGroup")
@@ -60,4 +62,17 @@ func (c ExecGroup) TerminateAndWait() {
 	}
 	c.cancelFunc()
 	c.wg.Wait()
+}
+
+// WaitForTimeout waits for the waitgroup for the specified max timeout
+func (c ExecGroup) WaitForTimeout(timeout time.Duration) {
+	cn := make(chan struct{})
+	go func() {
+		defer close(cn)
+		c.wg.Wait()
+	}()
+	select {
+	case <-time.After(timeout):
+		// Timed out
+	}
 }

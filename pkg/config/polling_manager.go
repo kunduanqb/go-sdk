@@ -173,6 +173,7 @@ func (cm *PollingProjectConfigManager) SyncConfig(datafile []byte) {
 // Start starts the polling
 func (cm *PollingProjectConfigManager) Start(ctx context.Context) {
 	cmLogger.Debug("Polling Config Manager Initiated")
+	cm.SyncConfig(cm.initDatafile) // initial poll
 	t := time.NewTicker(cm.pollingInterval)
 	for {
 		select {
@@ -199,9 +200,6 @@ func NewPollingProjectConfigManager(sdkKey string, pollingMangerOptions ...Optio
 	for _, opt := range pollingMangerOptions {
 		opt(&pollingProjectConfigManager)
 	}
-
-	initDatafile := pollingProjectConfigManager.initDatafile
-	pollingProjectConfigManager.SyncConfig(initDatafile) // initial poll
 	return &pollingProjectConfigManager
 }
 
