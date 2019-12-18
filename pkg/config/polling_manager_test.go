@@ -57,7 +57,6 @@ func TestNewPollingProjectConfigManagerWithOptions(t *testing.T) {
 	eg := newExecGroup()
 	configManager := NewPollingProjectConfigManager(sdkKey, WithRequester(mockRequester))
 	eg.Go(configManager.Start)
-	eg.WaitForTimeout(time.Millisecond * 50)
 	mockRequester.AssertExpectations(t)
 
 	actual, err := configManager.GetConfig()
@@ -79,7 +78,6 @@ func TestNewPollingProjectConfigManagerWithNull(t *testing.T) {
 	eg := newExecGroup()
 	configManager := NewPollingProjectConfigManager(sdkKey, WithRequester(mockRequester))
 	eg.Go(configManager.Start)
-	eg.WaitForTimeout(time.Millisecond * 50)
 	mockRequester.AssertExpectations(t)
 
 	_, err := configManager.GetConfig()
@@ -98,7 +96,6 @@ func TestNewPollingProjectConfigManagerWithSimilarDatafileRevisions(t *testing.T
 	eg := newExecGroup()
 	configManager := NewPollingProjectConfigManager(sdkKey, WithRequester(mockRequester))
 	eg.Go(configManager.Start)
-	eg.WaitForTimeout(time.Millisecond * 50)
 	mockRequester.AssertExpectations(t)
 
 	actual, err := configManager.GetConfig()
@@ -120,14 +117,13 @@ func TestNewPollingProjectConfigManagerWithLastModifiedDates(t *testing.T) {
 	responseHeaders.Set(LastModified, modifiedDate)
 
 	mockRequester.On("Get", []utils.Header(nil)).Return(mockDatafile1, responseHeaders, http.StatusOK, nil)
+	mockRequester.On("Get", []utils.Header{utils.Header{Name: ModifiedSince, Value: modifiedDate}}).Return([]byte{}, responseHeaders, http.StatusNotModified, nil)
 
 	sdkKey := "test_sdk_key"
 
 	eg := newExecGroup()
 	configManager := NewPollingProjectConfigManager(sdkKey, WithRequester(mockRequester))
 	eg.Go(configManager.Start)
-	eg.WaitForTimeout(time.Millisecond * 50)
-	mockRequester.AssertExpectations(t)
 
 	// Fetch valid config
 	actual, err := configManager.GetConfig()
@@ -136,7 +132,6 @@ func TestNewPollingProjectConfigManagerWithLastModifiedDates(t *testing.T) {
 	assert.Equal(t, projectConfig1, actual)
 
 	// Sync and check no changes were made to the previous config because of 304 error code
-	mockRequester.On("Get", []utils.Header{utils.Header{Name: ModifiedSince, Value: modifiedDate}}).Return([]byte{}, responseHeaders, http.StatusNotModified, nil)
 	configManager.SyncConfig([]byte{})
 	actual, err = configManager.GetConfig()
 	assert.Nil(t, err)
@@ -159,7 +154,6 @@ func TestNewPollingProjectConfigManagerWithDifferentDatafileRevisions(t *testing
 	eg := newExecGroup()
 	configManager := NewPollingProjectConfigManager(sdkKey, WithRequester(mockRequester))
 	eg.Go(configManager.Start)
-	eg.WaitForTimeout(time.Millisecond * 50)
 	mockRequester.AssertExpectations(t)
 
 	actual, err := configManager.GetConfig()
@@ -187,7 +181,6 @@ func TestNewPollingProjectConfigManagerWithErrorHandling(t *testing.T) {
 	eg := newExecGroup()
 	configManager := NewPollingProjectConfigManager(sdkKey, WithRequester(mockRequester))
 	eg.Go(configManager.Start)
-	eg.WaitForTimeout(time.Millisecond * 50)
 	mockRequester.AssertExpectations(t)
 
 	actual, err := configManager.GetConfig() // polling for bad file
@@ -219,14 +212,13 @@ func TestNewPollingProjectConfigManagerOnDecision(t *testing.T) {
 	eg := newExecGroup()
 	configManager := NewPollingProjectConfigManager(sdkKey, WithRequester(mockRequester))
 	eg.Go(configManager.Start)
-	eg.WaitForTimeout(time.Millisecond * 50)
-	mockRequester.AssertExpectations(t)
 
 	var numberOfCalls = 0
 	callback := func(notification notification.ProjectConfigUpdateNotification) {
 		numberOfCalls++
 	}
 	id, _ := configManager.OnProjectConfigUpdate(callback)
+	mockRequester.AssertExpectations(t)
 
 	actual, err := configManager.GetConfig()
 	assert.Nil(t, err)
